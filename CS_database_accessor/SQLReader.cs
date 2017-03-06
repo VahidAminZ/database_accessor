@@ -15,6 +15,18 @@ namespace CS_database_accessor
     private SqlCommand sql_cmd;
     private SerialPort serial_port;
     private bool is_port_open;
+    private string table_name;
+    private string database_name;
+
+    public void set_table_name(string name)
+    {
+      table_name = name;
+    }
+
+    public void set_database_name(string name)
+    {
+      database_name = name;
+    }
 
     /// <summary>
     /// Constructor for the SQLReader class.
@@ -56,14 +68,13 @@ namespace CS_database_accessor
       while (sql_data_reader.Read())
       {
         object[] contents = new object[sql_data_reader.FieldCount];
-        //int a = sql_data_reader.GetInt32(0);
         sql_data_reader.GetValues(contents);
         database_rows.Add(contents);
       }
       sql_connection.Close();
       return database_rows;
     }
-    public void put_file_in_database(string file_name)
+    public void put_file_in_database_by_rfid(string RFID, string file_name)
     {
       byte[] file;
       using (var stream = new FileStream(file_name, FileMode.Open, FileAccess.Read))
@@ -73,21 +84,21 @@ namespace CS_database_accessor
           file = reader.ReadBytes((int)stream.Length);
         }
       }
-      const string preparedCommand = @"
-                    UPDATE [dbo].[acas_table] SET
+      string preparedCommand = @"UPDATE " + database_name + ".dbo." + table_name +
+                               @" SET
                                STL_FILE = @File
-            WHERE [ID] = @ID
-                    ";
+                               WHERE [RFID] = @RFID";
       sql_cmd.CommandText = preparedCommand;
       sql_cmd.Parameters.Add("@File", SqlDbType.VarBinary, file.Length).Value = file;
-      sql_cmd.Parameters.Add("@ID", SqlDbType.Int).Value = 1;
+      sql_cmd.Parameters.Add("@RFID", SqlDbType.NVarChar).Value = RFID;
       sql_connection.Open();
       sql_data_reader = sql_cmd.ExecuteReader();
       sql_connection.Close();
     }
     public void read_database_by_RFID(string RFID)
     {
-      string query = @"SELECT * FROM [dbo].[acas_table] WHERE RFID_TAG = '" + RFID + "'";
+      string query = @"SELECT * FROM "
+                     + database_name + ".dbo." + table_name + " WHERE RFID_TAG = '" + RFID + "'";
       List<object[]> query_result = query_database(query);
     }
     public string read_RFID_tag(string port_name, int timeout)
@@ -117,7 +128,8 @@ namespace CS_database_accessor
 
     public string read_g_code(string RFID_tag)
     {
-      string query = @"SELECT G_CODE FROM [dbo].[acas_table] WHERE RFID_TAG = '" + RFID_tag + "'";
+      string query = @"SELECT G_CODE FROM "
+                      + database_name + ".dbo." + table_name + " WHERE RFID_TAG = '" + RFID_tag + "'";
       List<double> matrix_values = new List<double>();
       sql_cmd.CommandText = query;
       sql_connection.Open();
@@ -140,7 +152,8 @@ namespace CS_database_accessor
     }
     public List<double> read_alignment(string RFID_tag)
     {
-      string query = @"SELECT ALIGNMENT FROM [dbo].[acas_table] WHERE RFID_TAG = '" + RFID_tag + "'";
+      string query = @"SELECT ALIGNMENT FROM "
+                      + database_name + ".dbo." + table_name + " WHERE RFID_TAG = '" + RFID_tag + "'";
       List<double> matrix_values = new List<double>();
       sql_cmd.CommandText = query;
       sql_connection.Open();
@@ -169,6 +182,7 @@ namespace CS_database_accessor
       }
       //element.Attribute("values").Value;
       string rotation_values = element.Attribute("values").Value;
+      rotation_values = rotation_values.Trim();
       string[] rotation_strings = rotation_values.Split(' ');
       foreach (string rotation in rotation_strings)
       {
@@ -198,7 +212,8 @@ namespace CS_database_accessor
       }
       //element.Attribute("values").Value;
       string translation_values = element.Attribute("values").Value;
-      string[] translation_strings = rotation_values.Split(' ');
+      translation_values = translation_values.Trim();
+      string[] translation_strings = translation_values.Split(' ');
       foreach (string translation in translation_strings)
       {
         try
@@ -212,7 +227,7 @@ namespace CS_database_accessor
           return null;
         }
       }
-      if (matrix_values.Count != 9)
+      if (matrix_values.Count != 12)
       {
         Console.WriteLine("Failed to convert XML to array of numbers");
         sql_connection.Close();

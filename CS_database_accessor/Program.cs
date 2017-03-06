@@ -11,14 +11,16 @@ namespace CS_database_accessor
     static void Main(string[] args)
     {
       SQLReader sql_reader = new SQLReader("Data Source=192.168.4.1\\SQLEXPRESS;Initial Catalog=test_database;User ID=test;Password=test");
+      sql_reader.set_table_name("acas_table");
+      sql_reader.set_database_name("test_database");
       string current_RFID = "";
-      Console.WriteLine("Enter the command to execute");
-      Console.WriteLine("R - new RFID");
-      Console.WriteLine("G - Get G-code for current RFID");
-      Console.WriteLine("A - Read alignment for current RFID");
-      Console.WriteLine("Q - quit");
       while (true)
       {
+        Console.WriteLine("Enter the command to execute");
+        Console.WriteLine("R - new RFID");
+        Console.WriteLine("G - Get G-code for current RFID");
+        Console.WriteLine("A - Read alignment for current RFID");
+        Console.WriteLine("Q - quit");
         string command = Console.ReadLine();
         command = command.ToUpper();
         if (command == "Q")
@@ -80,7 +82,11 @@ namespace CS_database_accessor
             }
             try
             {
-              sql_reader.read_alignment(current_RFID);
+              List<double> alignment = sql_reader.read_alignment(current_RFID);
+              Console.WriteLine("{0, -5} {1, -5} {2, -5} {3, -5}", alignment[0], alignment[1], alignment[2], alignment[9]);
+              Console.WriteLine("{0, -5} {1, -5} {2, -5} {3, -5}", alignment[3], alignment[4], alignment[5], alignment[10]);
+              Console.WriteLine("{0, -5} {1, -5} {2, -5} {3, -5}", alignment[6], alignment[7], alignment[8], alignment[11]);
+              Console.WriteLine("0     0     0     1");
               break;
             }
             catch (System.TimeoutException)
